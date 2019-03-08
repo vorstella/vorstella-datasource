@@ -1,0 +1,47 @@
+{
+  "name": "VorstellaDatasource",
+  "id": "vorstella-datasource",
+  "type": "datasource",
+
+  "partials": {
+    "config": "public/app/plugins/datasource/simplejson/partials/config.html"
+  },
+
+  "metrics": true,
+  "annotations": true,
+
+  "info": {
+    "description": "A vorstella data source",
+    "author": {
+      "name": "Vorstella Corp",
+      "url": "https://vorstella.com"
+    },
+    "logos": {
+      "small": "img/simpleJson_logo.svg",
+      "large": "img/simpleJson_logo.svg"
+    },
+    "links": [
+      {"name": "GitHub", "url": "https://github.com/vorstella/vorstella-datasource"},
+      {"name": "MIT License", "url": "https://github.com/vorstella/vorstella-datasource/blob/master/LICENSE"}
+    ],
+    "version": "1.4.0",
+    "updated": "2018-06-20"
+  },
+
+  "routes": [
+    {
+      "path": "metrics",
+      "method": "GET",
+      "url": "https://metrics.dev.noc.vorstella.com",
+      "headers": [
+          {"name": "X-Api-Key", "content": "{{.SecureJsonData.apiKey}}"},
+          {"name": "Content-Type", "content": "application/json"}
+      ]
+    }
+  ],
+
+  "dependencies": {
+    "grafanaVersion": "3.x.x",
+    "plugins": [ ]
+  }
+}
