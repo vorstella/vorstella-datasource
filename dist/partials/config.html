@@ -10,10 +10,26 @@
         </p>
       </info-popover>
     </label>
-    <input class="gf-form-input width-30"
-        id="in-api-token"
-        type="password"
-        ng-model='ctrl.current.secureJsonData.apiToken'
-        placeholder="Enter your API token."></input>
+    <input class="gf-form-input width-60"
+      id="in-api-token"
+      type="password"
+      ng-model='ctrl.current.jsonData.apiToken'
+      placeholder="Enter your API token."></input>
+  </div>
+  <div class="gf-form">
+    <label class="gf-form-label width-14 pointer" for="in-api-url">
+      Override Api URL
+      <info-popover position="top center" mode="right-normal">
+        <p>
+            <i>Optional</i> This will override the default and use the specified
+            url.
+        </p>
+      </info-popover>
+    </label>
+    <input class="gf-form-input width-60"
+      id="in-api-url"
+      type="text"
+      ng-model='ctrl.current.jsonData.apiUrl'
+      placeholder="https://metrics.prod.noc.vorstella.com"></input>
   </div>
 </div>

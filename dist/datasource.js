@@ -3,160 +3,129 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.GenericDatasource = undefined;
+exports.GenericDatasource = void 0;
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _lodash = require("lodash");
-
-var _lodash2 = _interopRequireDefault(_lodash);
+var _lodash = _interopRequireDefault(require("lodash"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var GenericDatasource = exports.GenericDatasource = function () {
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var defaultSettings = {
+  name: "vorstella-datasource",
+  apiUrl: "https://metrics.dev.noc.vorstella.com"
+};
+
+var GenericDatasource =
+/*#__PURE__*/
+function () {
   function GenericDatasource(instanceSettings, $q, backendSrv, templateSrv) {
     _classCallCheck(this, GenericDatasource);
 
-    this.type = instanceSettings.type;
-    this.url = "https://metrics.dev.noc.vorstella.com";
-    this.name = instanceSettings.name;
-    this.q = $q;
+    var config = {
+      name: instanceSettings.name,
+      apiUrl: instanceSettings.jsonData.apiUrl,
+      apiToken: instanceSettings.jsonData.apiToken
+    };
+    console.log(instanceSettings);
+
+    _lodash.default.defaults(config, defaultSettings);
+
+    this.url = config.apiUrl;
+    this.name = config.name;
+    this.token = config.apiToken;
     this.backendSrv = backendSrv;
     this.templateSrv = templateSrv;
     this.headers = {
-      'Content-Type': 'application/json'
+      "Content-Type": "application/json",
+      "Authorization": "Token " + this.token
     };
-
-    console.log(instanceSettings);
   }
 
   _createClass(GenericDatasource, [{
     key: "query",
     value: function query(options) {
-      var query = this.buildQueryParameters(options);
-      query.targets = query.targets.filter(function (t) {
-        return !t.hide;
-      });
-
-      if (query.targets.length <= 0) {
-        return this.q.when({ data: [] });
-      }
-
-      if (this.templateSrv.getAdhocFilters) {
-        query.adhocFilters = this.templateSrv.getAdhocFilters(this.name);
-      } else {
-        query.adhocFilters = [];
-      }
-
       return this.backendSrv.datasourceRequest({
-        url: '/metrics/api/v1/customers/a57f0869-9af7-4b3b-9653-e2ad1b41fe3f/clusters',
+        url: this.url + '/metrics/api/v1/clusters',
         method: 'GET'
-      });
-    }
-  }, {
-    key: "testDatasource",
-    value: function testDatasource() {
-      return {
-        status: "success",
-        message: "Data source is working.",
-        title: "Success"
-      };
-      // return this.doRequest({
-      //   url: this.url + '/',
-      //   method: 'GET',
-      // }).then(response => {
-      //   if (response.status === 200) {
-      //     return { status: "success", message: "Data source is working", title: "Success" };
-      //   }
-      // });
-    }
-  }, {
-    key: "annotationQuery",
-    value: function annotationQuery(options) {
-      var query = this.templateSrv.replace(options.annotation.query, {}, 'glob');
-      var annotationQuery = {
-        range: options.range,
-        annotation: {
-          name: options.annotation.name,
-          datasource: options.annotation.datasource,
-          enable: options.annotation.enable,
-          iconColor: options.annotation.iconColor,
-          query: query
-        },
-        rangeRaw: options.rangeRaw
-      };
-
-      return this.doRequest({
-        url: this.url + '/annotations',
-        method: 'get',
-        data: annotationQuery
       }).then(function (result) {
         return result.data;
       });
     }
   }, {
+    key: "testDatasource",
+    value: function testDatasource() {
+      return this.backendSrv.datasourceRequest({
+        url: this.url + "/api/v1/clusters",
+        method: "GET",
+        headers: this.headers
+      }).then(function (result) {
+        if (result.status == 200) {
+          return {
+            status: "success",
+            message: "Data source is working.",
+            title: "Success"
+          };
+        } else {
+          return {
+            status: "failed",
+            message: "Please check your credentials",
+            title: "Failed"
+          };
+        }
+      });
+    }
+  }, {
+    key: "annotationQuery",
+    value: function annotationQuery(options) {
+      // var query = this.templateSrv.replace(options.annotation.query, {}, 'glob');
+      // var annotationQuery = {
+      //   range: options.range,
+      //   annotation: {
+      //     name: options.annotation.name,
+      //     datasource: options.annotation.datasource,
+      //     enable: options.annotation.enable,
+      //     iconColor: options.annotation.iconColor,
+      //     query: query
+      //   },
+      //   rangeRaw: options.rangeRaw
+      // };
+      //
+      // return this.doRequest({
+      //   url: this.url + '/annotations',
+      //   method: 'get',
+      //   data: annotationQuery
+      // }).then(result => {
+      //   return result.data;
+      // });
+      return {};
+    }
+  }, {
     key: "metricFindQuery",
     value: function metricFindQuery(query) {
-      var interpolated = {
-        target: this.templateSrv.replace(query, null, 'regex')
-      };
-
-      return this.doRequest({
-        url: this.url + '/search',
-        data: interpolated,
-        method: 'POST'
-      }).then(this.mapToTextValue);
-    }
-  }, {
-    key: "mapToTextValue",
-    value: function mapToTextValue(result) {
-      return _lodash2.default.map(result.data, function (d, i) {
-        if (d && d.text && d.value) {
-          return { text: d.text, value: d.value };
-        } else if (_lodash2.default.isObject(d)) {
-          return { text: d, value: i };
-        }
-        return { text: d, value: d };
-      });
-    }
-  }, {
-    key: "doRequest",
-    value: function doRequest(options) {
-      return;
-    }
-  }, {
-    key: "buildQueryParameters",
-    value: function buildQueryParameters(options) {
-      var _this = this;
-
-      //remove placeholder targets
-      options.targets = _lodash2.default.filter(options.targets, function (target) {
-        return target.target !== 'select metric';
-      });
-
-      var targets = _lodash2.default.map(options.targets, function (target) {
-        return {
-          target: _this.templateSrv.replace(target.target, options.scopedVars, 'regex'),
-          refId: target.refId,
-          hide: target.hide,
-          type: target.type || 'timeserie'
-        };
-      });
-
-      options.targets = targets;
-
-      return options;
+      // var interpolated = {
+      //     target: this.templateSrv.replace(query, null, 'regex')
+      // };
+      //
+      // return this.doRequest({
+      //   url: this.url + '/search',
+      //   data: interpolated,
+      //   method: 'POST',
+      // }).then(this.mapToTextValue);
+      return {};
     }
   }, {
     key: "getTagKeys",
     value: function getTagKeys(options) {
-      var _this2 = this;
+      var _this = this;
 
       return new Promise(function (resolve, reject) {
-        _this2.doRequest({
-          url: _this2.url + '/tag-keys',
+        _this.doRequest({
+          url: _this.url + '/tag-keys',
           method: 'POST',
           data: options
         }).then(function (result) {
@@ -167,11 +136,11 @@ var GenericDatasource = exports.GenericDatasource = function () {
   }, {
     key: "getTagValues",
     value: function getTagValues(options) {
-      var _this3 = this;
+      var _this2 = this;
 
       return new Promise(function (resolve, reject) {
-        _this3.doRequest({
-          url: _this3.url + '/tag-values',
+        _this2.doRequest({
+          url: _this2.url + '/tag-values',
           method: 'POST',
           data: options
         }).then(function (result) {
@@ -183,4 +152,6 @@ var GenericDatasource = exports.GenericDatasource = function () {
 
   return GenericDatasource;
 }();
+
+exports.GenericDatasource = GenericDatasource;
 //# sourceMappingURL=datasource.js.map
