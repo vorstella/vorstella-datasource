@@ -9,6 +9,8 @@ var _lodash = _interopRequireDefault(require("lodash"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function _readOnlyError(name) { throw new Error("\"" + name + "\" is read-only"); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -17,7 +19,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 var defaultSettings = {
   name: "vorstella-datasource",
-  apiUrl: "https://metrics.dev.noc.vorstella.com"
+  apiUrl: "https://metrics.prod.noc.vorstella.com"
 };
 
 var GenericDatasource =
@@ -31,7 +33,6 @@ function () {
       apiUrl: instanceSettings.jsonData.apiUrl,
       apiToken: instanceSettings.jsonData.apiToken
     };
-    console.log(instanceSettings);
 
     _lodash.default.defaults(config, defaultSettings);
 
@@ -42,6 +43,7 @@ function () {
     this.templateSrv = templateSrv;
     this.headers = {
       "Content-Type": "application/json",
+      "Accept": "application/json",
       "Authorization": "Token " + this.token
     };
   }
@@ -49,11 +51,33 @@ function () {
   _createClass(GenericDatasource, [{
     key: "query",
     value: function query(options) {
-      return this.backendSrv.datasourceRequest({
-        url: this.url + '/metrics/api/v1/clusters',
-        method: 'GET'
-      }).then(function (result) {
-        return result.data;
+      var targets = this.extractTargets(options);
+
+      if (targets.length == 0) {
+        return [];
+      }
+
+      var data = {
+        startAt: options.range.from.toISOString(),
+        stopAt: options.range.to.toISOString(),
+        intervalMs: options.intervalMs,
+        limit: options.maxDataPoints,
+        targets: targets
+      };
+      return [];
+    }
+  }, {
+    key: "extractTargets",
+    value: function extractTargets(options) {
+      //remove placeholder targets from query
+      options.targets = _lodash.default.filter(options.targets, function (target) {
+        return target.target && target.target !== 'select metric';
+      });
+      return _lodash.default.map(options.targets, function (target) {
+        return {
+          sampleId: target.target,
+          type: target.type || 'timeserie'
+        };
       });
     }
   }, {
@@ -82,41 +106,76 @@ function () {
   }, {
     key: "annotationQuery",
     value: function annotationQuery(options) {
-      // var query = this.templateSrv.replace(options.annotation.query, {}, 'glob');
-      // var annotationQuery = {
-      //   range: options.range,
-      //   annotation: {
-      //     name: options.annotation.name,
-      //     datasource: options.annotation.datasource,
-      //     enable: options.annotation.enable,
-      //     iconColor: options.annotation.iconColor,
-      //     query: query
-      //   },
-      //   rangeRaw: options.rangeRaw
-      // };
-      //
-      // return this.doRequest({
-      //   url: this.url + '/annotations',
-      //   method: 'get',
-      //   data: annotationQuery
-      // }).then(result => {
-      //   return result.data;
-      // });
-      return {};
+      var data = {
+        startAt: options.range.from.toISOString(),
+        stopAt: options.range.to.toISOString(),
+        limit: options.annotation.limit,
+        enable: options.annotation.enable,
+        hide: options.annotation.hide,
+        type: options.annotation.type,
+        tags: options.annotation.tags,
+        query: options.annotation.query
+      };
+      var annotations = this.backendSrv.datasourceRequest({
+        url: this.url + '/api/v1/grafana/annotations',
+        method: 'POST',
+        headers: this.headers,
+        data: data
+      }).then(function (result) {
+        return _lodash.default.map(result.data.data, function (issue, index) {
+          var firstSeen = Date.parse(issue.firstSeen);
+          var lastSeen = null;
+
+          if (issue.lastSeen) {
+            lastSeen = Date.parse(issue.lastSeen);
+          }
+
+          var isRegion = lastSeen != null;
+          return {
+            annotation: {
+              name: options.annotation.name,
+              enabled: options.annotation.enable,
+              datasource: options.annotation.datasource
+            },
+            title: issue.summary,
+            time: firstSeen,
+            timeEnd: lastSeen,
+            isRegion: isRegion,
+            tags: [],
+            text: issue.description
+          };
+        });
+      });
+      return annotations;
     }
   }, {
     key: "metricFindQuery",
     value: function metricFindQuery(query) {
-      // var interpolated = {
-      //     target: this.templateSrv.replace(query, null, 'regex')
-      // };
-      //
-      // return this.doRequest({
-      //   url: this.url + '/search',
-      //   data: interpolated,
-      //   method: 'POST',
-      // }).then(this.mapToTextValue);
-      return {};
+      var params = null;
+
+      if (query) {
+        params = (_readOnlyError("params"), {
+          target: query
+        });
+      } // TODO: When we already made a query, hang on to the results for some time
+      //       5 minutes or so sounds like a good amount for a cache.
+
+
+      return this.backendSrv.datasourceRequest({
+        url: this.url + '/api/v1/grafana/search',
+        params: params,
+        method: 'GET',
+        headers: this.headers
+      }).then(function (result) {
+        return _lodash.default.map(result.data.data, function (serviceSampleType, _index) {
+          var text = serviceSampleType.simpleName.toLowerCase() + " " + serviceSampleType.serviceType;
+          var value = serviceSampleType.id;
+          return {
+            text: text,
+            value: value
+          };
+        });
+      });
     }
   }, {
     key: "getTagKeys",
